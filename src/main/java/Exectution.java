@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.LinkedList;
 
 /**
  * Created by zhihu on 16/1/31.
@@ -13,7 +14,10 @@ public class Exectution {
 //        }catch (IOException ex){
 //            System.out.println("error");
 //        }
-        readFile.readDataByline();
+        readFile.exe();
 
+//        FileIO io = new FileIO();
+//        LinkedList<DNAPiece> DNAList = io.formatDataintoList();
+//        System.out.println(DNAList.get(0));
     }
 }

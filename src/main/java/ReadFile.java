@@ -1,5 +1,3 @@
-
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -15,7 +13,8 @@ import java.util.*;
  */
 public class ReadFile {
 
-    private  static int eachLine = 50;
+    private static int eachLine = 30;
+    private static int topLine = 116416;
 
     private static String INPATH = "src/main/resource/hapmap.gz";
     private static String OUTPATH = "src/main/resource/out.xlsx";
@@ -27,6 +26,7 @@ public class ReadFile {
     private int excelLine = 0;
 
     private LinkedList<String> DNAList = new LinkedList<>();
+
 
     public void readDataByline() {
 
@@ -67,6 +67,57 @@ public class ReadFile {
             System.out.println("error");
         }
         System.out.println("-------------finish!--------------");
+
+    }
+
+    public void exe(){
+        for (int i = 1; i < 116416; i++) {
+            getDNAPieces(i,eachLine);
+        }
+        try {
+            OutputStream stream = new FileOutputStream(OUTPATH);
+            wb.write(stream);
+            stream.close();
+        } catch (IOException e){
+            System.out.println("error");
+        }
+
+    }
+
+    public void getDNAPieces(int start, int length){
+        try {
+            File file = new File(INPATH);
+            InputStreamReader read = new InputStreamReader(new FileInputStream(file),"UTF-8");
+            BufferedReader reader = new BufferedReader(read);
+            int lineNumber = 0;
+            String line;
+            boolean index = false;
+            while ((line = reader.readLine()) != null) {
+                if (lineNumber<start){
+                    lineNumber++;
+                    continue;
+                }
+                if (lineNumber>(start+length-1)){
+                    storeData(lineNumber);
+                    index = true;
+                    break;
+                }
+                else {
+                    if (line.contains("\t")){
+                        splitByTable(line);
+                    }else {
+                        splitBySpace(line);
+                    }
+                }
+                lineNumber++;
+            }
+            if (!index) storeData(lineNumber);
+            System.out.println(start);
+            reader.close();
+            read.close();
+        } catch (IOException e){
+            System.out.println("error");
+        }
 
     }
 
