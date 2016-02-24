@@ -13,8 +13,9 @@ import java.util.*;
  */
 public class ReadFile {
 
-    private static int eachLine = 30;
+    private static int eachLine = 100;
     private static int topLine = 116416;
+    private static int bundary = 40;
 
     private static String INPATH = "src/main/resource/hapmap.gz";
     private static String OUTPATH = "src/main/resource/out.xlsx";
@@ -25,59 +26,66 @@ public class ReadFile {
     private Sheet sheet = (Sheet) wb.createSheet("sheet1");
     private int excelLine = 0;
 
-    private LinkedList<String> DNAList = new LinkedList<>();
+    private LinkedList<String> DNAListB = new LinkedList<>();
+    private LinkedList<String> DNAListA = new LinkedList<>();
+    private LinkedList<String> DNAListAB = new LinkedList<>();
+    private LinkedList<DNA> DNAList = new LinkedList<>();
+    private String rsID;
+    private String phyPosit;
 
 
-    public void readDataByline() {
-
-        try {
-            Map<Integer, Integer> result = new LinkedHashMap();
-            File file = new File(INPATH);
-            InputStreamReader read = new InputStreamReader(new FileInputStream(file),"UTF-8");
-            BufferedReader reader = new BufferedReader(read);
-            String line;
-            int lineNumber = 0;
-
-            while ((line = reader.readLine()) != null) {
-                if (lineNumber == 0) {
-                    lineNumber++;
-                    continue;
-                }
-                else {
-                    if (lineNumber%eachLine == 0){
-                        storeData(lineNumber);
-                    }else {
-                        if (line.contains("\t")){
-                            splitByTable(line);
-                        }else {
-                            splitBySpace(line);
-                        }
-                    }
-                }
-                lineNumber++;
-                System.out.println("#");
-            }
-            storeData(lineNumber);
-//            result = sortMap(result);
-            reader.close();
-            OutputStream stream = new FileOutputStream(OUTPATH);
-            wb.write(stream);
-            stream.close();
-        } catch (IOException e){
-            System.out.println("error");
-        }
-        System.out.println("-------------finish!--------------");
-
-    }
+//    public void readDataByline() {
+//
+//        try {
+//            Map<Integer, Integer> result = new LinkedHashMap();
+//            File file = new File(INPATH);
+//            InputStreamReader read = new InputStreamReader(new FileInputStream(file),"UTF-8");
+//            BufferedReader reader = new BufferedReader(read);
+//            String line;
+//            int lineNumber = 0;
+//
+//            while ((line = reader.readLine()) != null) {
+//                if (lineNumber == 0) {
+//                    lineNumber++;
+//                    continue;
+//                }
+//                else {
+//                    if (lineNumber%eachLine == 0){
+//                        storeData(lineNumber);
+//                    }else {
+//                        if (line.contains("\t")){
+//                            splitByTable(line);
+//                        }else {
+//                            splitBySpace(line);
+//                        }
+//                    }
+//                }
+//                lineNumber++;
+//                System.out.println("#");
+//            }
+//            storeData(lineNumber);
+////            result = sortMap(result);
+//            reader.close();
+//            OutputStream stream = new FileOutputStream(OUTPATH);
+//            wb.write(stream);
+//            stream.close();
+//        } catch (IOException e){
+//            System.out.println("error");
+//        }
+//        System.out.println("-------------finish!--------------");
+//
+//    }
 
     public void exe(){
-        for (int i = 1; i < 116416; i++) {
+        for (int i = 1; i < topLine; i++) {
             getDNAPieces(i,eachLine);
         }
         try {
+            writeInExcel();
             OutputStream stream = new FileOutputStream(OUTPATH);
             wb.write(stream);
             stream.close();
+            System.out.println("finish!");
         } catch (IOException e){
             System.out.println("error");
         }
@@ -91,7 +99,7 @@ public class ReadFile {
             BufferedReader reader = new BufferedReader(read);
             int lineNumber = 0;
             String line;
-            boolean index = false;
+//            boolean index = false;
             while ((line = reader.readLine()) != null) {
                 if (lineNumber<start){
                     lineNumber++;
@@ -99,7 +107,7 @@ public class ReadFile {
                 }
                 if (lineNumber>(start+length-1)){
                     storeData(lineNumber);
-                    index = true;
+//                    index = true;
                     break;
                 }
                 else {
@@ -111,7 +119,7 @@ public class ReadFile {
                 }
                 lineNumber++;
             }
-            if (!index) storeData(lineNumber);
+//            if (!index) storeData(lineNumber);
             System.out.println(start);
             reader.close();
             read.close();
@@ -122,17 +130,27 @@ public class ReadFile {
     }
 
     public void storeData(int lineNumber){
-        Map<String, Integer> map = transformListToMap(DNAList);
+        Map<String, Integer> mapA = transformListToMap(DNAListA);
+        Map<String, Integer> mapB = transformListToMap(DNAListB);
+//        Map<String, Integer> mapAB = transformListToMap(DNAListAB);
 //                        System.out.println(lineNumber + "==>" + map.size());
 //                        result.put(lineNumber,map.size());
-        writeInExcel(lineNumber,map.size());
+//        writeInExcel(lineNumber,map.size());
+        if (mapA.size()<bundary && mapB.size()<bundary){
+            DNA dna = new DNA(mapA.size(),mapB.size(),lineNumber);
+            DNAList.add(dna);
+        }
         reset();
     }
 
     public void reset(){
-        DNAList = new LinkedList<>();
+        DNAListA = new LinkedList<>();
+        DNAListB = new LinkedList<>();
+        DNAListAB = new LinkedList<>();
         first = true;
         excelLine ++;
+        rsID = "";
+        phyPosit = "";
     }
 
 //    public Sheet readFile() throws IOException{
@@ -146,8 +164,10 @@ public class ReadFile {
         String[] array = line.split(" ");
         int personId = 0;
         for (int i = 2; i < array.length; i=i+2) {
-            String contain = array[i] + array[i+1];
-            addToList(contain,personId);
+            String A = array[i];
+            String B = array[i+1];
+//            String contain = array[i] + array[i+1];
+            addToList(A,B,personId);
             personId++;
         }
         first = false;
@@ -158,22 +178,31 @@ public class ReadFile {
         int personId = 0;
         for (int i = 2; i < array.length; i++) {
             String[] cell = array[i].split(" ");
-            String contain = cell[0] + cell[1];
-            addToList(contain,personId);
+            String A = cell[0];
+            String B = cell[1];
+            addToList(A,B,personId);
             personId++;
         }
         first = false;
     }
 
 
-    public void addToList(String contain,int personId){
+    public void addToList(String A, String B, int personId) {
 
         if (first){
-            DNAList.add(contain);
+            DNAListA.add(A);
+            DNAListB.add(B);
+            DNAListAB.add(A+B);
         }else {
-            contain = DNAList.get(personId) + contain;
-            DNAList.remove(personId);
-            DNAList.add(personId,contain);
+            A = DNAListA.get(personId) + A;
+            DNAListA.remove(personId);
+            DNAListA.add(personId,A);
+            B = DNAListB.get(personId) + B;
+            DNAListB.remove(personId);
+            DNAListB.add(personId,B);
+            String contain = DNAListAB.get(personId) + A + B;
+            DNAListAB.remove(personId);
+            DNAListAB.add(personId,contain);
         }
 
     }
@@ -217,12 +246,16 @@ public class ReadFile {
         System.out.println("===================mapEnd==================");
     }
 
-    public void writeInExcel(int lineNumber,int value){
-        Row row = (Row) sheet.createRow(excelLine);
-        Cell cell0 = row.createCell(0);
-        cell0.setCellValue(lineNumber);
-        Cell cell1 = row.createCell(1);
-        cell1.setCellValue(value);
+    public void writeInExcel(){
+        for (int i = 0; i < DNAList.size(); i++) {
+            DNA dna = DNAList.get(i);
+            Row row = (Row) sheet.createRow(excelLine);
+            Cell cell0 = row.createCell(0);
+            cell0.setCellValue(dna.getLineNumber());
+            Cell cell1 = row.createCell(1);
+            cell1.setCellValue(Math.abs(dna.getANumber()-dna.getBNumber()));
+            System.out.println("write " + i + " line");
+        }
     }
 
     public static boolean write(String outPath) throws Exception {
