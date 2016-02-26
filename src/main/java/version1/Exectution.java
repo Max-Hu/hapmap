@@ -1,5 +1,6 @@
+package version1;
+
 import java.io.IOException;
-import java.util.LinkedList;
 
 /**
  * Created by zhihu on 16/1/31.

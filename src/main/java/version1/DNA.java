@@ -1,3 +1,5 @@
+package version1;
+
 /**
  * Created by zhihu on 16/2/4.
  */
